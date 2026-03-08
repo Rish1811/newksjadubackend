@@ -3,14 +3,7 @@ const router = express.Router();
 const Product = require('../models/Product');
 const { protect, admin } = require('../middleware/authMiddleware');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Ensure uploads directory exists for products
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+const { put } = require('@vercel/blob');
 
 const { put } = require('@vercel/blob');
 
@@ -20,13 +13,10 @@ const storage = multer.memoryStorage();
 const upload = multer({
     storage,
     fileFilter: function (req, file, cb) {
-        const filetypes = /jpeg|jpg|png|webp/;
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = filetypes.test(file.mimetype);
-        if (extname && mimetype) {
-            return cb(null, true);
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
         } else {
-            cb('Images only!');
+            cb(new Error('Images only!'));
         }
     }
 });

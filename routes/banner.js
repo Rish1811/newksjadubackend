@@ -3,15 +3,6 @@ const router = express.Router();
 const Banner = require('../models/Banner');
 const { protect, admin } = require('../middleware/authMiddleware');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
 const { put } = require('@vercel/blob');
 
 // Multer Config: Use memory storage for serverless
@@ -20,13 +11,11 @@ const storage = multer.memoryStorage();
 const upload = multer({
     storage,
     fileFilter: function (req, file, cb) {
-        const filetypes = /jpeg|jpg|png|webp|gif/;
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = filetypes.test(file.mimetype);
-        if (extname && mimetype) {
-            return cb(null, true);
+        // accepting all image types for better compatibility
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
         } else {
-            cb('Images only!');
+            cb(new Error('Images only!'));
         }
     }
 });
