@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
@@ -55,6 +56,22 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 // Base route
 app.get('/', (req, res) => {
     res.send('API is running...');
+});
+
+// Health Check Route
+app.get('/api/health', (req, res) => {
+    const state = mongoose.connection.readyState;
+    const states = {
+        0: "Disconnected",
+        1: "Connected",
+        2: "Connecting",
+        3: "Disconnecting"
+    };
+    res.json({
+        status: "Backend is running",
+        database: states[state],
+        timestamp: new Date()
+    });
 });
 
 const PORT = process.env.PORT || 5000;
