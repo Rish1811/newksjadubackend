@@ -41,7 +41,9 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
             return res.status(400).json({ message: 'No image file uploaded' });
         }
 
-        const blob = await put(`banners/${Date.now()}-${req.file.originalname}`, req.file.buffer);
+        const blob = await put(`banners/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+            access: 'public',
+        });
 
         const banner = new Banner({
             image: blob.url,

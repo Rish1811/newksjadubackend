@@ -65,7 +65,9 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
         // Upload files to Vercel Blob
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
-                const blob = await put(`products/${Date.now()}-${file.originalname}`, file.buffer);
+                const blob = await put(`products/${Date.now()}-${file.originalname}`, file.buffer, {
+                    access: 'public',
+                });
 
                 if (file.fieldname === 'image') {
                     imagePath = blob.url;
@@ -146,7 +148,9 @@ router.post('/:id/reviews', protect, upload.any(), async (req, res) => {
             let reviewImagesArray = [];
             if (req.files && req.files.length > 0) {
                 for (const file of req.files) {
-                    const blob = await put(`reviews/${Date.now()}-${file.originalname}`, file.buffer);
+                    const blob = await put(`reviews/${Date.now()}-${file.originalname}`, file.buffer, {
+                        access: 'public',
+                    });
                     reviewImagesArray.push(blob.url);
                 }
             }
