@@ -15,10 +15,22 @@ const policyRoutes = require('./routes/policy');
 // Load environment variables
 dotenv.config();
 
-// Connect to Database
-connectDB();
-
 const app = express();
+
+// Middleware to ensure DB is connected
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error('Database Connection error in middleware:', err.message);
+        res.status(500).json({
+            message: 'Database connection failed',
+            details: err.message,
+            tip: 'Check if IP 0.0.0.0/0 is whitelisted in Atlas and MONGO_URI is correct'
+        });
+    }
+});
 
 // Middleware
 app.use(cors({
