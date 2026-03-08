@@ -23,7 +23,7 @@ const app = express();
 // Middleware
 app.use(express.json()); // Body parser
 app.use(cors()); // Enable CORS
-
+//vhgbnbvv
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
