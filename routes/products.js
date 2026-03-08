@@ -44,11 +44,12 @@ router.get('/', async (req, res) => {
         const products = await Product.find({});
         res.json(products);
     } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+        console.error('Fetch products error:', error);
+        res.status(500).json({ message: 'Server Error', details: error.message });
     }
 });
 
-// @desc    Fetch single product
+// @desc    Fetch single product Rishidogne456@js
 // @route   GET /api/products/:id
 // @access  Public
 router.get('/:id', async (req, res) => {
@@ -63,7 +64,8 @@ router.get('/:id', async (req, res) => {
             res.status(404).json({ message: 'Product not found' });
         }
     } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+        console.error('Fetch single product error:', error);
+        res.status(500).json({ message: 'Server Error (Fetch ID)', details: error.message });
     }
 });
 
