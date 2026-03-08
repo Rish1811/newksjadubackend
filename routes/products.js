@@ -5,8 +5,6 @@ const { protect, admin } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const { put } = require('@vercel/blob');
 
-const { put } = require('@vercel/blob');
-
 // Multer Config: Use memory storage for Vercel/serverless environments
 const storage = multer.memoryStorage();
 
@@ -67,9 +65,7 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
         // Upload files to Vercel Blob
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
-                const blob = await put(`products/${Date.now()}-${file.originalname}`, file.buffer, {
-                    access: 'public',
-                });
+                const blob = await put(`products/${Date.now()}-${file.originalname}`, file.buffer);
 
                 if (file.fieldname === 'image') {
                     imagePath = blob.url;
@@ -149,9 +145,10 @@ router.post('/:id/reviews', protect, upload.any(), async (req, res) => {
 
             let reviewImagesArray = [];
             if (req.files && req.files.length > 0) {
-                req.files.forEach(file => {
-                    reviewImagesArray.push(`/${file.path.replace(/\\/g, '/')}`);
-                });
+                for (const file of req.files) {
+                    const blob = await put(`reviews/${Date.now()}-${file.originalname}`, file.buffer);
+                    reviewImagesArray.push(blob.url);
+                }
             }
 
             const review = {
