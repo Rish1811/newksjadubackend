@@ -8,12 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// ... (Multer config remains the same) ...
+const { put } = require('@vercel/blob');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -23,15 +18,8 @@ router.get('/', protect, admin, async (req, res) => {
     res.json(users);
 });
 
-// Multer configuration for image upload
-const storage = multer.diskStorage({
-    destination(req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename(req, file, cb) {
-        cb(null, `user-${req.user._id}-${Date.now()}${path.extname(file.originalname)}`);
-    }
-});
+// Multer configuration for image upload in memory
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,
@@ -79,41 +67,30 @@ router.post('/profile/image', protect, upload.single('image'), async (req, res) 
     try {
         const user = await User.findById(req.user._id);
 
-        if (user) {
-            // Normalize path for all OS
-            let normalizePath = req.file.path.replace(/\\/g, '/');
-
-            // Ensure path starts with /uploads not just uploads
-            if (!normalizePath.startsWith('uploads/')) {
-                // If it doesn't start with uploads/ check if it starts with /uploads
-                if (!normalizePath.startsWith('/uploads/')) {
-                    // Try to find where uploads starts
-                    if (normalizePath.includes('uploads/')) {
-                        normalizePath = normalizePath.substring(normalizePath.indexOf('uploads/'));
-                    }
-                }
-            }
-
-            // Final check
-            if (!normalizePath.startsWith('/')) {
-                normalizePath = '/' + normalizePath;
-            }
-
-            user.image = normalizePath;
-            await user.save();
-
-            console.log(`Image saved for ${user.email}: ${user.image}`);
-
-            res.json({
-                message: 'Image uploaded successfully',
-                image: user.image
-            });
-        } else {
-            res.status(404).json({ message: 'User not found' });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image file uploaded' });
+        }
+
+        const blob = await put(`users/${user._id}-${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+            access: 'public',
+        });
+
+        user.image = blob.url;
+        await user.save();
+
+        console.log(`Image saved for ${user.email}: ${user.image}`);
+
+        res.json({
+            message: 'Image uploaded successfully',
+            image: user.image
+        });
     } catch (error) {
         console.error('Upload Error:', error);
-        res.status(500).json({ message: 'Server error during upload' });
+        res.status(500).json({ message: 'Server error during upload', details: error.message });
     }
 });
 

@@ -22,7 +22,7 @@ const importData = async () => {
             password: 'admin123', // Will be hashed by pre-save hook
             isAdmin: true
         };
-
+ 
         await User.create(adminUser);
 
         console.log('Admin User Created Successfully!');

@@ -12,15 +12,10 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Multer Config
-const storage = multer.diskStorage({
-    destination(req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename(req, file, cb) {
-        cb(null, `product-${Date.now()}${path.extname(file.originalname)}`);
-    }
-});
+const { put } = require('@vercel/blob');
+
+// Multer Config: Use memory storage for Vercel/serverless environments
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,
@@ -79,15 +74,19 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
         let imagePath = '';
         let additionalImagesArray = [];
 
-        // Manually parse files since we used upload.any()
+        // Upload files to Vercel Blob
         if (req.files && req.files.length > 0) {
-            req.files.forEach(file => {
+            for (const file of req.files) {
+                const blob = await put(`products/${Date.now()}-${file.originalname}`, file.buffer, {
+                    access: 'public',
+                });
+
                 if (file.fieldname === 'image') {
-                    imagePath = `/${file.path.replace(/\\/g, '/')}`;
+                    imagePath = blob.url;
                 } else if (file.fieldname === 'additionalImages') {
-                    additionalImagesArray.push(`/${file.path.replace(/\\/g, '/')}`);
+                    additionalImagesArray.push(blob.url);
                 }
-            });
+            }
         }
 
         // Parse JSON strings from formData
@@ -117,8 +116,8 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
         const createdProduct = await product.save();
         res.status(201).json(createdProduct);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Product creation failed' });
+        console.error('Product Creation Error:', error);
+        res.status(500).json({ message: 'Product creation failed', details: error.message });
     }
 });
 
