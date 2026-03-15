@@ -62,6 +62,13 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
         let imagePath = '';
         let additionalImagesArray = [];
 
+        // Parse JSON strings from formData
+        let parsedBulletPoints = [];
+        try { if (bulletPoints) parsedBulletPoints = JSON.parse(bulletPoints); } catch (e) { }
+
+        let parsedSizes = [];
+        try { if (sizes) parsedSizes = JSON.parse(sizes); } catch (e) { }
+
         // Upload files to Vercel Blob
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
@@ -73,16 +80,15 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
                     imagePath = blob.url;
                 } else if (file.fieldname === 'additionalImages') {
                     additionalImagesArray.push(blob.url);
+                } else if (file.fieldname.startsWith('sizeImage_')) {
+                    const indexStr = file.fieldname.split('_')[1];
+                    const index = parseInt(indexStr, 10);
+                    if (!isNaN(index) && parsedSizes[index]) {
+                        parsedSizes[index].image = blob.url;
+                    }
                 }
             }
         }
-
-        // Parse JSON strings from formData
-        let parsedBulletPoints = [];
-        try { if (bulletPoints) parsedBulletPoints = JSON.parse(bulletPoints); } catch (e) { }
-
-        let parsedSizes = [];
-        try { if (sizes) parsedSizes = JSON.parse(sizes); } catch (e) { }
 
         const product = new Product({
             name: name || 'Sample Name',
