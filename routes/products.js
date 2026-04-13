@@ -24,7 +24,18 @@ const upload = multer({
 // @access  Public
 router.get('/', async (req, res) => {
     try {
-        const products = await Product.find({});
+        const keyword = req.query.keyword ? {
+            name: {
+                $regex: req.query.keyword,
+                $options: 'i'
+            }
+        } : {};
+
+        const category = req.query.category ? {
+            category: { $regex: `^${req.query.category.trim()}$`, $options: 'i' }
+        } : {};
+
+        const products = await Product.find({ ...keyword, ...category });
         res.json(products);
     } catch (error) {
         console.error('Fetch products error:', error);
@@ -62,7 +73,7 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
         let imagePath = '';
         let additionalImagesArray = [];
 
-        // Parse JSON strings from formData
+        // Parse JSON strings from formData first
         let parsedBulletPoints = [];
         try { if (bulletPoints) parsedBulletPoints = JSON.parse(bulletPoints); } catch (e) { }
 
@@ -80,9 +91,8 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
                     imagePath = blob.url;
                 } else if (file.fieldname === 'additionalImages') {
                     additionalImagesArray.push(blob.url);
-                } else if (file.fieldname.startsWith('sizeImage_')) {
-                    const indexStr = file.fieldname.split('_')[1];
-                    const index = parseInt(indexStr, 10);
+                } else if (file.fieldname.startsWith('sizeImages_')) {
+                    const index = parseInt(file.fieldname.split('_')[1], 10);
                     if (!isNaN(index) && parsedSizes[index]) {
                         parsedSizes[index].image = blob.url;
                     }
@@ -112,6 +122,74 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
     } catch (error) {
         console.error('Product Creation Error:', error);
         res.status(500).json({ message: 'Product creation failed', details: error.message });
+    }
+});
+
+// @desc    Update a product
+// @route   PUT /api/products/:id
+// @access  Private/Admin
+router.put('/:id', protect, admin, upload.any(), async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+
+        if (product) {
+            const { name, price, description, category, countInStock, bulletPoints, sizes, overview, howToUse } = req.body;
+
+            product.name = name || product.name;
+            product.price = price || product.price;
+            product.description = description || product.description;
+            product.category = category || product.category;
+            product.countInStock = countInStock || product.countInStock;
+            product.bulletPoints = bulletPoints ? JSON.parse(bulletPoints) : product.bulletPoints;
+            product.overview = overview || product.overview;
+            product.howToUse = howToUse || product.howToUse;
+
+            if (sizes) {
+                const parsedSizes = JSON.parse(sizes);
+                // Update size images if new ones provided
+                for (let i = 0; i < parsedSizes.length; i++) {
+                    const sizeImgField = `sizeImages_${i}`;
+                    const sizeImgFile = req.files.find(f => f.fieldname === sizeImgField);
+                    if (sizeImgFile) {
+                        const blob = await put(`products/${Date.now()}-${sizeImgFile.originalname}`, sizeImgFile.buffer, {
+                            access: 'public',
+                        });
+                        parsedSizes[i].image = blob.url;
+                    }
+                }
+                product.sizes = parsedSizes;
+            }
+
+            // Handle main image update
+            const mainImgFile = req.files.find(f => f.fieldname === 'image');
+            if (mainImgFile) {
+                const blob = await put(`products/${Date.now()}-${mainImgFile.originalname}`, mainImgFile.buffer, {
+                    access: 'public',
+                });
+                product.image = blob.url;
+            }
+
+            // Handle additional images (append or replace? Usually replace in simpler logic, but let's append for now or handle as provided)
+            const addImgFiles = req.files.filter(f => f.fieldname === 'additionalImages');
+            if (addImgFiles.length > 0) {
+                const addImgUrls = [];
+                for (const file of addImgFiles) {
+                    const blob = await put(`products/${Date.now()}-${file.originalname}`, file.buffer, {
+                        access: 'public',
+                    });
+                    addImgUrls.push(blob.url);
+                }
+                product.additionalImages = addImgUrls; // Replacing gallery for simplicity in edit
+            }
+
+            const updatedProduct = await product.save();
+            res.json(updatedProduct);
+        } else {
+            res.status(404).json({ message: 'Product not found' });
+        }
+    } catch (error) {
+        console.error('Product Update Error:', error);
+        res.status(500).json({ message: 'Product update failed', details: error.message });
     }
 });
 

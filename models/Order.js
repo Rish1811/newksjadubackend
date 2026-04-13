@@ -38,13 +38,21 @@ const orderSchema = mongoose.Schema({
     status: {
         type: String,
         required: true,
-        default: 'Pending', // Pending, Accepted, Rejected, Delivered
+        default: 'Accepted', // Pending, Accepted, Rejected, Delivered
     },
     tracking: {
         shippingDate: { type: String },
         deliveryDate: { type: String },
         deliveryTime: { type: String },
         details: { type: String },
+    },
+    isPaid: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+    paidAt: {
+        type: Date,
     },
 }, {
     timestamps: true

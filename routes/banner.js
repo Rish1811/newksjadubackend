@@ -25,7 +25,15 @@ const upload = multer({
 // @access  Public
 router.get('/', async (req, res) => {
     try {
-        const banners = await Banner.find({});
+        let filter = {};
+        if (req.query.type) {
+            if (req.query.type === 'regular') {
+                filter = { $or: [{ type: 'regular' }, { type: { $exists: false } }] };
+            } else {
+                filter = { type: req.query.type };
+            }
+        }
+        const banners = await Banner.find(filter);
         res.json(banners);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -47,7 +55,8 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
 
         const banner = new Banner({
             image: blob.url,
-            title: req.body.title || ''
+            title: req.body.title || '',
+            type: req.body.type || 'regular'
         });
 
         const createdBanner = await banner.save();

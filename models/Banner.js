@@ -12,6 +12,11 @@ const bannerSchema = mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    type: {
+        type: String,
+        enum: ['regular', 'front'],
+        default: 'regular'
     }
 }, {
     timestamps: true

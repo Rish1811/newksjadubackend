@@ -12,12 +12,15 @@ router.post('/', protect, async (req, res) => {
     if (orderItems && orderItems.length === 0) {
         return res.status(400).json({ message: 'No order items' });
     } else {
+        const { paymentMethod, isPaid, paidAt } = req.body;
         const order = new Order({
             user: req.user._id,
             orderItems,
             shippingAddress,
             totalPrice,
-            paymentMethod: 'COD'
+            paymentMethod: paymentMethod || 'COD',
+            isPaid: isPaid || false,
+            paidAt: paidAt || null
         });
 
         const createdOrder = await order.save();

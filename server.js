@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const serverless = require('serverless-http');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
@@ -12,6 +13,12 @@ const orderRoutes = require('./routes/orders');
 const cartRoutes = require('./routes/cart');
 const contactRoutes = require('./routes/contact');
 const policyRoutes = require('./routes/policy');
+const announcementRoutes = require('./routes/announcement');
+const videoRoutes = require('./routes/videos');
+const concernRoutes = require('./routes/concerns');
+const razorpayRoutes = require('./routes/razorpay');
+const paymentSettingsRoutes = require('./routes/payment_settings');
+const categoryRoutes = require('./routes/categories');
 
 // Load environment variables
 dotenv.config();
@@ -49,6 +56,12 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/policies', policyRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/videos', videoRoutes);
+app.use('/api/concerns', concernRoutes);
+app.use('/api/razorpay', razorpayRoutes);
+app.use('/api/payment_settings', paymentSettingsRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
@@ -82,4 +95,4 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-module.exports = app;
+module.exports.handler = serverless(app);
