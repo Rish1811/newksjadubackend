@@ -8,7 +8,11 @@ const { put } = require('@vercel/blob');
 const storage = multer.memoryStorage();
 const upload = multer({
     storage,
+    limits: {
+        fileSize: 100 * 1024 * 1024 // 100MB limit for reels
+    },
     fileFilter: function (req, file, cb) {
+        console.log('Receiving file:', file.originalname, 'Mime:', file.mimetype);
         if (file.mimetype.startsWith('video/')) {
             cb(null, true);
         } else {
@@ -53,8 +57,12 @@ router.post('/', protect, admin, upload.single('video'), async (req, res) => {
         const createdVideo = await video.save();
         res.status(201).json(createdVideo);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
+        console.error('Video Upload Error:', error);
+        res.status(500).json({ 
+            message: 'Video upload failed', 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'production' ? null : error.stack
+        });
     }
 });
 

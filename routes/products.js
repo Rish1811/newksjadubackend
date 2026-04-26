@@ -68,7 +68,7 @@ router.get('/:id', async (req, res) => {
 // @access  Private/Admin
 router.post('/', protect, admin, upload.any(), async (req, res) => {
     try {
-        const { name, price, description, category, countInStock, bulletPoints, sizes, overview, howToUse } = req.body;
+        const { name, price, description, category, countInStock, bulletPoints, sizes, overview, howToUse, displaySection } = req.body;
 
         let imagePath = '';
         let additionalImagesArray = [];
@@ -114,7 +114,8 @@ router.post('/', protect, admin, upload.any(), async (req, res) => {
             bulletPoints: parsedBulletPoints,
             sizes: parsedSizes,
             overview: overview || '',
-            howToUse: howToUse || ''
+            howToUse: howToUse || '',
+            displaySection: displaySection || 'none'
         });
 
         const createdProduct = await product.save();
@@ -133,7 +134,7 @@ router.put('/:id', protect, admin, upload.any(), async (req, res) => {
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            const { name, price, description, category, countInStock, bulletPoints, sizes, overview, howToUse } = req.body;
+            const { name, price, description, category, countInStock, bulletPoints, sizes, overview, howToUse, displaySection } = req.body;
 
             product.name = name || product.name;
             product.price = price || product.price;
@@ -143,6 +144,7 @@ router.put('/:id', protect, admin, upload.any(), async (req, res) => {
             product.bulletPoints = bulletPoints ? JSON.parse(bulletPoints) : product.bulletPoints;
             product.overview = overview || product.overview;
             product.howToUse = howToUse || product.howToUse;
+            product.displaySection = displaySection || product.displaySection;
 
             if (sizes) {
                 const parsedSizes = JSON.parse(sizes);
@@ -217,7 +219,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
 // @access  Private
 router.post('/:id/reviews', protect, upload.any(), async (req, res) => {
     try {
-        const { rating, comment } = req.body;
+        const { rating, comment, title } = req.body;
         const product = await Product.findById(req.params.id);
 
         if (product) {
@@ -241,6 +243,7 @@ router.post('/:id/reviews', protect, upload.any(), async (req, res) => {
 
             const review = {
                 name: req.user.name,
+                title: title || '',
                 rating: Number(rating),
                 comment,
                 images: reviewImagesArray,
@@ -275,6 +278,7 @@ router.get('/all/reviews', async (req, res) => {
                     productName: p.name,
                     productId: p._id,
                     user: r.name,
+                    title: r.title,
                     rating: r.rating,
                     comment: r.comment,
                     images: r.images,

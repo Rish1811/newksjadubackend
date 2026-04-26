@@ -25,27 +25,19 @@ dotenv.config();
 
 const app = express();
 
-// Middleware to ensure DB is connected
-app.use(async (req, res, next) => {
-    try {
-        await connectDB();
-        next();
-    } catch (err) {
-        console.error('Database Connection error in middleware:', err.message);
-        res.status(500).json({
-            message: 'Database connection failed',
-            details: err.message,
-            tip: 'Check if IP 0.0.0.0/0 is whitelisted in Atlas and MONGO_URI is correct'
-        });
-    }
-});
+// Connect to Database on Startup
+connectDB();
 
 // Middleware
 app.use(cors({
-    origin: '*', // Allow all origins (standard for public APIs)
+    origin: true, // Reflect request origin
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
+
+// Manual CORS preflight handling for Netlify/Vercel edge cases
+app.options('*', cors());
 app.use(express.json()); // Body parser
 // Routes
 app.use('/api/auth', authRoutes);
@@ -65,6 +57,16 @@ app.use('/api/categories', categoryRoutes);
 
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Global Error Handler:', err.stack);
+    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    res.status(statusCode).json({
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    });
+});
 
 // Base route
 app.get('/', (req, res) => {
@@ -89,10 +91,8 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
 
 module.exports.handler = serverless(app);

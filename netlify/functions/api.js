@@ -4,4 +4,7 @@
 
 const { handler } = require('../../server');
 
-exports.handler = handler;
+exports.handler = async (event, context) => {
+    // Standard handler execution
+    return await handler(event, context);
+};

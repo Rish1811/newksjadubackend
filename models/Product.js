@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const reviewSchema = mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
     name: { type: String, required: true },
+    title: { type: String, required: false }, // Catchy headline for the review
     rating: { type: Number, required: true },
     comment: { type: String, required: true },
     images: { type: [String], default: [] }
@@ -82,7 +83,12 @@ const productSchema = mongoose.Schema({
         type: String,
         default: ''
     },
-    reviews: [reviewSchema]
+    reviews: [reviewSchema],
+    displaySection: {
+        type: String,
+        enum: ['none', 'moms_favorite', 'new_launch', 'mega_saver', 'super_saver_refills'],
+        default: 'none'
+    }
 }, {
     timestamps: true
 });

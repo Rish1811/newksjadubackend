@@ -55,6 +55,45 @@ router.post('/register', async (req, res) => {
 // @desc    Auth user & get token (Login)
 // @route   POST /api/auth/login
 // @access  Public
+// @desc    Social Login (Google/Apple)
+// @route   POST /api/auth/social-login
+// @access  Public
+router.post('/social-login', async (req, res) => {
+    const { email, name, provider, providerId, image } = req.body;
+
+    try {
+        let user = await User.findOne({ email });
+
+        if (user) {
+            // Update user if needed (e.g. update name or image)
+            user.name = name || user.name;
+            user.image = image || user.image;
+            await user.save();
+        } else {
+            // Create new user
+            user = await User.create({
+                name,
+                email,
+                password: Math.random().toString(36).slice(-10), // Random password for social users
+                image,
+                isSocial: true,
+                provider
+            });
+        }
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            image: user.image,
+            token: generateToken(user._id)
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 

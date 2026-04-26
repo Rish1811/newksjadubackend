@@ -22,7 +22,7 @@ router.get('/', protect, async (req, res) => {
 // @route   POST /api/cart
 // @access  Private
 router.post('/', protect, async (req, res) => {
-    const { product, name, image, price, qty } = req.body;
+    const { product, name, image, price, originalPrice, qty } = req.body;
 
     try {
         let cart = await Cart.findOne({ user: req.user._id });
@@ -36,7 +36,7 @@ router.post('/', protect, async (req, res) => {
         if (itemIndex > -1) {
             cart.cartItems[itemIndex].qty += qty;
         } else {
-            cart.cartItems.push({ product, name, image, price, qty });
+            cart.cartItems.push({ product, name, image, price, originalPrice, qty });
         }
 
         const updatedCart = await cart.save();

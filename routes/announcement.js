@@ -15,16 +15,32 @@ router.get('/', async (req, res) => {
     }
 });
 
-// @desc    Update announcement
+// @desc    Add announcement
 // @route   POST /api/announcements
 // @access  Private/Admin
 router.post('/', protect, admin, async (req, res) => {
     try {
         const { text, isActive } = req.body;
-        await Announcement.deleteMany({});
         const announcement = new Announcement({ text, isActive });
         const createdAnnouncement = await announcement.save();
         res.status(201).json(createdAnnouncement);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// @desc    Delete announcement
+// @route   DELETE /api/announcements/:id
+// @access  Private/Admin
+router.delete('/:id', protect, admin, async (req, res) => {
+    try {
+        const announcement = await Announcement.findById(req.params.id);
+        if (announcement) {
+            await Announcement.deleteOne({ _id: announcement._id });
+            res.json({ message: 'Announcement removed' });
+        } else {
+            res.status(404).json({ message: 'Announcement not found' });
+        }
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }

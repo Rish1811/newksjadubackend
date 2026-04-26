@@ -23,6 +23,18 @@ const userSchema = mongoose.Schema({
         type: Boolean,
         required: true,
         default: false
+    },
+    phone: {
+        type: String,
+        required: false
+    },
+    isSocial: {
+        type: Boolean,
+        default: false
+    },
+    provider: {
+        type: String,
+        required: false
     }
 }, {
     timestamps: true
