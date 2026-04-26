@@ -36,9 +36,14 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
-// Manual CORS preflight handling for Netlify/Vercel edge cases
-app.options('*', cors());
-app.use(express.json()); // Body parser
+// CORS is already handled by app.use(cors(...)) above
+// Body parser with defensive check for empty bodies
+app.use((req, res, next) => {
+    if (req.method === 'GET' || req.method === 'DELETE' || !req.headers['content-type']?.includes('application/json')) {
+        return next();
+    }
+    express.json()(req, res, next);
+});
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -91,8 +96,11 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+// ONLY listen if NOT running on Netlify/serverless
+if (!process.env.NETLIFY && process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports.handler = serverless(app);
