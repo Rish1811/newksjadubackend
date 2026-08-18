@@ -4,7 +4,9 @@ const cartSchema = mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'User'
+        ref: 'User',
+        unique: true,   // one cart per user; prevents duplicate-cart drift
+        index: true
     },
     cartItems: [
         {
@@ -13,6 +15,7 @@ const cartSchema = mongoose.Schema({
             image: { type: String, required: true },
             price: { type: Number, required: true },
             originalPrice: { type: Number },
+            size: { type: String },
             product: {
                 type: mongoose.Schema.Types.ObjectId,
                 required: true,

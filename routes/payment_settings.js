@@ -1,61 +1,84 @@
 const express = require('express');
 const router = express.Router();
 const PaymentSettings = require('../models/PaymentSettings');
+const { protect, admin } = require('../middleware/authMiddleware');
 
-// @desc    Get Razorpay configuration
-// @route   GET /api/payment/settings
-// @access  Public (only non-sensitive information like environment and status)
-router.get('/config', async (req, res) => {
+const getSettings = async () => {
+    let settings = await PaymentSettings.findOne();
+    if (!settings) settings = await PaymentSettings.create({});
+    return settings;
+};
+
+/** Show only the last 4 characters of a secret, so the admin can tell which
+ *  key is configured without the value ever leaving the server. */
+const maskSecret = (value) =>
+    value ? `${'•'.repeat(Math.max(0, String(value).length - 4))}${String(value).slice(-4)}` : '';
+
+// @desc    Public Razorpay config (publishable key only)
+// @route   GET /api/payment_settings/config
+// @access  Public
+router.get('/config', async (req, res, next) => {
     try {
-        let settings = await PaymentSettings.findOne();
-        if (!settings) {
-            settings = await PaymentSettings.create({});
-        }
-
+        const settings = await getSettings();
         const isProduction = settings.environment === 'production';
-        const activeKey = isProduction ? settings.liveKeyId : settings.testKeyId;
 
         res.json({
             isEnabled: settings.isRazorpayEnabled,
             environment: settings.environment,
-            keyId: activeKey
+            // key_id is designed to be public; key_secret never is.
+            keyId: isProduction ? settings.liveKeyId : settings.testKeyId,
         });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        next(err);
     }
 });
 
-// @desc    Get All Razorpay configurations for Admin Dashboard
-// @route   GET /api/payment/settings/admin
-// @access  Private (Admin Role only - assume current simple implementation for now)
-router.get('/admin', async (req, res) => {
+// @desc    Read settings for the admin dashboard
+// @route   GET /api/payment_settings/admin
+// @access  Private/Admin
+router.get('/admin', protect, admin, async (req, res, next) => {
     try {
-        let settings = await PaymentSettings.findOne();
-        if (!settings) {
-            settings = await PaymentSettings.create({});
-        }
-        res.json(settings);
+        const settings = await getSettings();
+
+        // Secrets are returned masked. The dashboard only needs to display
+        // which key is set, and it re-submits a full value to change one.
+        res.json({
+            _id: settings._id,
+            isRazorpayEnabled: settings.isRazorpayEnabled,
+            environment: settings.environment,
+            testKeyId: settings.testKeyId,
+            liveKeyId: settings.liveKeyId,
+            testKeySecret: maskSecret(settings.testKeySecret),
+            liveKeySecret: maskSecret(settings.liveKeySecret),
+            hasTestSecret: Boolean(settings.testKeySecret),
+            hasLiveSecret: Boolean(settings.liveKeySecret),
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        next(err);
     }
 });
 
-// @desc    Update Razorpay configuration
-// @route   POST /api/payment/settings/admin
-// @access  Private (Admin Only)
-router.post('/admin', async (req, res) => {
+// @desc    Update settings
+// @route   POST /api/payment_settings/admin
+// @access  Private/Admin
+router.post('/admin', protect, admin, async (req, res, next) => {
     try {
-        let settings = await PaymentSettings.findOne();
+        const settings = await getSettings();
+        const { isRazorpayEnabled, environment, testKeyId, liveKeyId, testKeySecret, liveKeySecret } = req.body;
 
-        if (settings) {
-            settings = await PaymentSettings.findOneAndUpdate({}, req.body, { new: true });
-        } else {
-            settings = await PaymentSettings.create(req.body);
-        }
+        if (isRazorpayEnabled !== undefined) settings.isRazorpayEnabled = Boolean(isRazorpayEnabled);
+        if (environment && ['test', 'production'].includes(environment)) settings.environment = environment;
+        if (testKeyId !== undefined) settings.testKeyId = String(testKeyId).trim();
+        if (liveKeyId !== undefined) settings.liveKeyId = String(liveKeyId).trim();
 
-        res.json({ message: 'Settings updated successfully', settings });
+        // A masked value coming back from the form means "leave it alone".
+        if (testKeySecret && !testKeySecret.includes('•')) settings.testKeySecret = String(testKeySecret).trim();
+        if (liveKeySecret && !liveKeySecret.includes('•')) settings.liveKeySecret = String(liveKeySecret).trim();
+
+        await settings.save();
+        res.json({ message: 'Settings updated successfully' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        next(err);
     }
 });
 

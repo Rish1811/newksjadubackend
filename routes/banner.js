@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Banner = require('../models/Banner');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cacheRoute, invalidate } = require('../config/cache');
 const multer = require('multer');
 const { put } = require('@vercel/blob');
 
@@ -23,7 +24,7 @@ const upload = multer({
 // @desc    Get all banners
 // @route   GET /api/banners
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', cacheRoute('banners', 300), async (req, res) => {
     try {
         let filter = {};
         if (req.query.type) {
@@ -60,6 +61,7 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
         });
 
         const createdBanner = await banner.save();
+        await invalidate('banners');
         res.status(201).json(createdBanner);
     } catch (error) {
         console.error('Banner upload error:', error);
@@ -76,6 +78,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
 
         if (banner) {
             await Banner.deleteOne({ _id: banner._id });
+            await invalidate('banners');
             res.json({ message: 'Banner removed' });
         } else {
             res.status(404).json({ message: 'Banner not found' });

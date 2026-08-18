@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cacheRoute, invalidate } = require('../config/cache');
 const multer = require('multer');
 const path = require('path');
 
@@ -14,7 +15,7 @@ const upload = multer({ storage });
 // @desc    Get all categories
 // @route   GET /api/categories
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', cacheRoute('categories', 300), async (req, res) => {
     try {
         const categories = await Category.find({});
         res.json(categories);
@@ -51,6 +52,7 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
         });
 
         const createdCategory = await category.save();
+        await invalidate('categories');
         res.status(201).json(createdCategory);
     } catch (error) {
         console.error(error);
@@ -66,6 +68,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
         const category = await Category.findById(req.params.id);
         if (category) {
             await Category.deleteOne({ _id: category._id });
+            await invalidate('categories');
             res.json({ message: 'Category removed' });
         } else {
             res.status(404).json({ message: 'Category not found' });

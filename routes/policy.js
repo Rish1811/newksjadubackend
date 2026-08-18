@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Policy = require('../models/Policy');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cacheRoute, invalidate } = require('../config/cache');
 
 // @desc    Get policy by type
 // @route   GET /api/policies/:type
 // @access  Public
-router.get('/:type', async (req, res) => {
+router.get('/:type', cacheRoute('policies', 600), async (req, res) => {
     try {
         const policy = await Policy.findOne({ type: req.params.type });
         if (policy) {
@@ -33,6 +34,7 @@ router.post('/', protect, admin, async (req, res) => {
         const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
         const policy = await Policy.findOneAndUpdate(filter, update, options);
+        await invalidate('policies');
         res.status(200).json(policy);
     } catch (error) {
         console.error(error);

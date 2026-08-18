@@ -93,6 +93,12 @@ const productSchema = mongoose.Schema({
     timestamps: true
 });
 
+// Indexes for the queries the storefront actually runs.
+productSchema.index({ category: 1 });          // /api/products?category=...
+productSchema.index({ displaySection: 1 });    // home-page rows
+productSchema.index({ createdAt: -1 });        // default listing order
+productSchema.index({ name: 'text', description: 'text' }); // keyword search
+
 const Product = mongoose.model('Product', productSchema);
 
 module.exports = Product;

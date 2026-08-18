@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/Announcement');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cacheRoute, invalidate } = require('../config/cache');
 
 // @desc    Get announcement
 // @route   GET /api/announcements
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', cacheRoute('announcements', 120), async (req, res) => {
     try {
         const announcements = await Announcement.find({});
         res.json(announcements);
@@ -23,6 +24,7 @@ router.post('/', protect, admin, async (req, res) => {
         const { text, isActive } = req.body;
         const announcement = new Announcement({ text, isActive });
         const createdAnnouncement = await announcement.save();
+        await invalidate('announcements');
         res.status(201).json(createdAnnouncement);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -37,6 +39,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
         const announcement = await Announcement.findById(req.params.id);
         if (announcement) {
             await Announcement.deleteOne({ _id: announcement._id });
+            await invalidate('announcements');
             res.json({ message: 'Announcement removed' });
         } else {
             res.status(404).json({ message: 'Announcement not found' });

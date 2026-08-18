@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Concern = require('../models/Concern');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cacheRoute, invalidate } = require('../config/cache');
 const multer = require('multer');
 const { put } = require('@vercel/blob');
 
@@ -20,7 +21,7 @@ const upload = multer({
 // @desc    Get all concerns
 // @route   GET /api/concerns
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', cacheRoute('concerns', 300), async (req, res) => {
     try {
         const concerns = await Concern.find({});
         res.json(concerns);
@@ -49,6 +50,7 @@ router.post('/', protect, admin, upload.single('image'), async (req, res) => {
         });
 
         const createdConcern = await concern.save();
+        await invalidate('concerns');
         res.status(201).json(createdConcern);
     } catch (error) {
         console.error('Concern upload error:', error);
@@ -65,6 +67,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
 
         if (concern) {
             await Concern.deleteOne({ _id: concern._id });
+            await invalidate('concerns');
             res.json({ message: 'Concern removed' });
         } else {
             res.status(404).json({ message: 'Concern not found' });

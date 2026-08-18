@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Video = require('../models/Video');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cacheRoute, invalidate } = require('../config/cache');
 const multer = require('multer');
 const { put } = require('@vercel/blob');
 
@@ -24,7 +25,7 @@ const upload = multer({
 // @desc    Get all videos
 // @route   GET /api/videos
 // @access  Public
-router.get('/', async (req, res) => {
+router.get('/', cacheRoute('videos', 300), async (req, res) => {
     try {
         const videos = await Video.find({}).populate('productLink', 'name price image rating numReviews');
         res.json(videos);
@@ -55,6 +56,7 @@ router.post('/', protect, admin, upload.single('video'), async (req, res) => {
         });
 
         const createdVideo = await video.save();
+        await invalidate('videos');
         res.status(201).json(createdVideo);
     } catch (error) {
         console.error('Video Upload Error:', error);
@@ -74,6 +76,7 @@ router.delete('/:id', protect, admin, async (req, res) => {
         const video = await Video.findById(req.params.id);
         if (video) {
             await Video.deleteOne({ _id: video._id });
+            await invalidate('videos');
             res.json({ message: 'Video removed' });
         } else {
             res.status(404).json({ message: 'Video not found' });
